@@ -1,10 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MyReflectionApp
 {
@@ -12,13 +7,13 @@ namespace MyReflectionApp
     {
         private static NetworkMonitorSettings _networkMonitorSettings = new NetworkMonitorSettings();
         private static Type? _warningServiceType;
-        private static MethodInfo? _warningServiceMethod; 
+        private static MethodInfo? _warningServiceMethod;
         private static List<object> _warningServiceParameterValues = new List<object>();
         private static object _warningService;
 
         public static void Warn()
         {
-            if(_warningService == null)
+            if (_warningService == null)
             {
                 _warningService = Activator.CreateInstance(_warningServiceType);
             }
@@ -41,23 +36,26 @@ namespace MyReflectionApp
 
             appSettingsConfig.Bind("NetworkMonitorSettings", _networkMonitorSettings);
 
+            //create object of type
             _warningServiceType = Assembly.GetExecutingAssembly()
                 .GetType(_networkMonitorSettings.WarningService);
-            if(_warningServiceType == null)
+            if (_warningServiceType == null)
             {
                 throw new Exception("Configuration is invalid - warning service not found");
             }
 
+            //create instance of method
             _warningServiceMethod = _warningServiceType
                 .GetMethod(_networkMonitorSettings.MethodToExecute);
-            if(_warningServiceMethod == null)
+            if (_warningServiceMethod == null)
             {
                 throw new Exception("Configuration is invalid - method to execute on warning service not found");
             }
 
+            //create list of parameters
             foreach (var parameterInfo in _warningServiceMethod.GetParameters())
             {
-                if(!_networkMonitorSettings.PropertyBag.TryGetValue(parameterInfo.Name, out object parameterValue))
+                if (!_networkMonitorSettings.PropertyBag.TryGetValue(parameterInfo.Name, out object parameterValue))
                 {
                     throw new Exception($"Configuration is invalid - parameter {parameterInfo.Name} not found.");
                 }
@@ -67,7 +65,7 @@ namespace MyReflectionApp
                     var typedValue = Convert.ChangeType(parameterValue, parameterInfo.ParameterType);
                     _warningServiceParameterValues.Add(typedValue);
                 }
-                catch 
+                catch
                 {
                     throw new Exception($"Configuration is invalid - parameter {parameterInfo.Name} cannot be converter to expected type {parameterInfo.ParameterType}.");
                 }

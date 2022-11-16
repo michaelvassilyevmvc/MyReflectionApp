@@ -1,13 +1,15 @@
 ﻿using MyReflectionApp;
+using ReflectionMagic;
 using System.Reflection;
+using static MyReflectionApp.IoCExampleClasses;
 
 Console.Title = "Изучение рефлексии";
 
-NetworkMonitor.BootstrapFromConfiguration();
-Console.WriteLine("Что то пошло не так ...");
+var person = new Person("Michael");
+var privateField = person.GetType().GetField("_aPrivateField", BindingFlags.Instance | BindingFlags.NonPublic);
+privateField?.SetValue(person, "New private field value");
 
-NetworkMonitor.Warn();
-
+person.AsDynamic()._aPrivateField = "Update value via reflection magic";
 
 Console.ReadLine();
 
@@ -120,4 +122,79 @@ static void CodeFromThirdModule()
 
 
     Console.WriteLine(personForManipulation);
+}
+
+static void NetworkMonitorExample()
+{
+    NetworkMonitor.BootstrapFromConfiguration();
+    Console.WriteLine("Что то пошло не так ...");
+
+    NetworkMonitor.Warn();
+}
+
+static void CodeFromFourthModule()
+{
+    var myList = new List<Person>();
+    Console.WriteLine(myList.GetType());
+
+    var myDictionary = new Dictionary<string, int>();
+    Console.WriteLine(myDictionary.GetType());
+
+    var dictionaryType = myDictionary.GetType();
+    foreach (var genericTypeArgument in dictionaryType.GenericTypeArguments)
+    {
+        Console.WriteLine(genericTypeArgument);
+    }
+
+    foreach (var genericArgument in dictionaryType.GetGenericArguments())
+    {
+        Console.WriteLine(genericArgument);
+    }
+
+    var openDictinaryType = typeof(Dictionary<,>);
+    foreach (var genericTypeArgument in openDictinaryType.GenericTypeArguments)
+    {
+        Console.WriteLine(genericTypeArgument);
+    }
+
+    foreach (var genericArgument in openDictinaryType.GetGenericArguments())
+    {
+        Console.WriteLine(genericArgument);
+    }
+
+    var createdInstance = Activator.CreateInstance(typeof(List<Person>));
+    Console.WriteLine(createdInstance?.GetType());
+
+    //var openResultType = typeof(Result<>);
+    //var closedResultType = openResultType.MakeGenericType(typeof(Person));
+    //var createdResult = Activator.CreateInstance(closedResultType);
+    //Console.WriteLine(createdResult.GetType());
+
+    var openResultType = Type.GetType("MyReflectionApp.Result`1");
+    var closedResultType = openResultType.MakeGenericType(Type.GetType("MyReflectionApp.Person"));
+    var createdResult = Activator.CreateInstance(closedResultType);
+
+
+    var methodInfo = closedResultType.GetMethod("AlterAndReturnValue");
+    Console.WriteLine(methodInfo);
+
+    var genericMethodInfo = methodInfo.MakeGenericMethod(typeof(Employee));
+    genericMethodInfo.Invoke(createdResult, new object[] { new Employee() });
+}
+
+static void IoCContainerExample()
+{
+    var iocContainer = new IoCContainer();
+    iocContainer.Register<IWaterService, TapWaterService>();
+    var waterService = iocContainer.Resolve<IWaterService>();
+
+    //iocContainer.Register<IBeanService<Catimor>, ArabicaBeanService<Catimor>>();
+
+    //iocContainer.Register<ICoffeeService, CoffeeService>();
+    //var coffeeService = iocContainer.Resolve<ICoffeeService>();
+
+    iocContainer.Register(typeof(IBeanService<>), typeof(ArabicaBeanService<>));
+
+    iocContainer.Register<ICoffeeService, CoffeeService>();
+    var coffeeService = iocContainer.Resolve<ICoffeeService>();
 }
